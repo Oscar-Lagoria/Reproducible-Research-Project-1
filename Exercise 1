@@ -1,0 +1,84 @@
+##Loading and preprocessing the data.
+### Download and read data.frame.
+
+filename <- unzip("activity.zip")
+ActivityData <- read.csv("activity.csv", header = T, sep = ",", na.strings = "NA")
+ActivityData$date<-as.Date(ActivityData$date, "%Y-%m-%d")
+ActivityData$steps <- as.numeric(ActivityData$steps)
+ActivityData$interval <- as.numeric(ActivityData$interval)
+head(ActivityData)
+str(ActivityData)
+dim(ActivityData)  
+summary(ActivityData)  
+
+### Change format
+
+ActivityData$date <- as.Date(ActivityData$date)
+summary(is.na(ActivityData$steps))
+ActivityData$DateTime<- as.POSIXct(ActivityData$date, format="%Y-%m-%d")
+
+
+#1- What is mean total number of steps taken per day?
+## We need see missing values
+
+## Remove missing values, so we created a functinon call Total_activity.
+
+Total_activity <- ActivityData[which(!is.na(ActivityData$steps)),]
+Activitydays <- tapply(Total_activity$steps, Total_activity$date, sum)
+
+## It,s time to aggregate the data by day and create a histogram.
+
+hist(Activitydays, main = "Total steps taken each day",col = "light blue", xlab = "Steps", ylab = "Date")
+head(Activitydays)
+
+## To calculate mean and median of the total number os steps taken day.
+
+Mean_Steps <- mean(Activitydays, na.rm = TRUE)
+Mean_Steps
+
+Median_Steps <- median(Activitydays, na.rm=TRUE)
+Median_Steps
+
+#2 What is the average daily activity pattern?
+##2.1 Time series plot of the 5-minute interval and the average number of steps taken, averaged across all days.
+###Cleaning Nas
+
+ActivityDataNonNAs <- ActivityData[!is.na(ActivityData$steps),]
+ActivityDataNonNAs
+
+
+###Average number of steps per interval.
+
+AVGstepsByInterval <-  ActivityData%>%
+  group_by(interval)%>%
+  filter(!is.na(steps))%>%
+  summarise(avg_steps = mean(steps, na.rm=TRUE))
+AVGstepsByInterval
+ 
+##2.2 Creating the historgram of total steps per day
+
+ggplot(AVGstepsByInterval, aes(x =interval , y=avg_steps)) +
+  geom_line(color="red", size=1) +
+  labs(title = "Average Daily Steps", x = "Interval", y = "Average Steps Per Day")
+
+#3. Are there differences in activity patterns between weekdays and weekends?
+##3.1 Create a factor with 2 levels: Weekend and Weekday. 
+
+ActivityDataNonNAs$Weekdays <- weekdays(ActivityDataNonNAs$date) 
+ActivityDataNonNAs$Weekend <- ifelse (ActivityDataNonNAs$Weekday == "Saturday" | ActivityDataNonNAs$Weekday == "Sunday", "Weekend", "Weekday")
+head(ActivityDataNonNAs,5)
+
+
+##3.2 Make a serial plot containing a time series plot
+
+WeekendTable <- aggregate(ActivityDataNonNAs$steps, by=list(ActivityDataNonNAs$Weekend, ActivityDataNonNAs$interval), mean)
+names(WeekendTable)[1] ="Weekend"
+names(WeekendTable)[2] ="interval"
+names(WeekendTable)[3] ="steps"
+
+plot <- ggplot(WeekendTable, aes(x = interval, y = steps, color= Weekend)) +
+  geom_line() +
+  facet_grid(Weekend ~ .) +
+  labs(title = "MEAN OF STEPS", x = "interval", y = "steps")
+print(plot)
+
